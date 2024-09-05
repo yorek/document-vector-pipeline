@@ -7,11 +7,11 @@
     "AzureDocumentIntelligenceConnectionString": "https://.cognitiveservices.azure.com/",
     "AzureDocumentIntelligenceKey": "",
     "AzureOpenAIKey": "",
-    "AzureOpenAIConnectionString": "https:/.openai.azure.com/",
+    "AzureOpenAIConnectionString": "https://.openai.azure.com/",
     "RunningLocally": true,
     "AzureOpenAIModelDeployment": "text-embedding-3-small",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "SqlConnectionString" = ""
+    "SqlConnectionString": "Server=tcp:.database.windows.net,1433;Initial Catalog=;Connection Timeout=30;Authentication=Active Directory Default"
   }
 }
 

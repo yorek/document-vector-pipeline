@@ -119,7 +119,7 @@ public class BlobTriggerFunction(
 
         //check if database table exists if not create one 
 
-        this._logger.LogInformation("Create document table if it doesnot exist.");
+        this._logger.LogInformation("Create document table if it does not exist.");
 
         await EnsureDocumentTableExistsAsync(connstring, CreateDocumentTableScript);
 
