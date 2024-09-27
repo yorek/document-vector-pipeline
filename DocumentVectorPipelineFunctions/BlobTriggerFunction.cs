@@ -123,8 +123,6 @@ public class BlobTriggerFunction(
 
         this._logger.LogInformation("Create document table if it doesnot exist.");    
 
-        this._logger.LogInformation("Managed Credential is : {0}", managedIdentityClientId);
-
         if (managedIdentityClientId != null)
         {
             //User-assigned managed identity Client ID is passed in via ManagedIdentityClientId
