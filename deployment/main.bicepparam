@@ -6,7 +6,6 @@ var baseName = 'docing'
 param managedIdentity_name = '${baseName}useridentity'
 param storage_name = '${baseName}blobacc'
 param function_app_name = '${baseName}funcapp'
-param cosmosdb_name = '${baseName}cosmosacc'
 param document_intelligence_name = '${baseName}docintl'
 param open_ai_name = '${baseName}openai'
 
@@ -20,15 +19,11 @@ param storage_containers = [
   }
 ]
 
+//azure sql params
+param azuresqldb_name =  '${baseName}db'
+param azuresqlServerName =  '${baseName}server'
 // Function app params
 param function_app_storageSkuName = 'Standard_LRS'
-
-// CosmosDB params
-param cosmosdb_databaseName = 'semantic_search_db'
-param cosmosdb_capabilities = [
-  { name: 'EnableServerless' }
-  { name: 'EnableNoSQLVectorSearch' }
-]
 
 // Document Intelligence Params
 param document_intelligence_sku = {

@@ -1,32 +1,33 @@
-# Azure Cosmos DB Document to Vector ingestion pipeline Proof-of-concept
+# Azure SQL Database, Document to Vector ingestion pipeline Proof-of-concept
 
 ## Background
-This purpose of this project is to demonstrate a proof of concept pipeline for ingesting content stored in document form (pdf, docx, etc) into a searchable index in Azure Cosmos DB for NoSQL.
+This purpose of this project is to demonstrate a proof of concept pipeline for ingesting content stored in document form (pdf, docx, etc) into Azure SQL Vector store for information retrieval.
 
-**Let us know what you think!** Please reach out to CDB4AI@Microsoft.com with feedback and create a GitHub issue for any bugs/feature requests.
+**Let us know what you think!** Create a GitHub issue for any bugs/feature requests.
 
 ### Pipeline stages
 The basic stages of the pipeline include:
 
-1. File upload to Azure blob storage.
-1. Text extraction - converting the document format into raw text to be indexed.
-1. Text chunking - breaking the text into reasonable size chunks for LLMs to process.
-1. Text embedding - using an LLM to produce a vector embedding of the semantics of text chunk.
-1. Text storage - storing each text chunk along with it's embedding in an Azure Cosmos DB container configured to perform efficient vector (and eventually Full-text) searches.
+1. User uploads a file to Azure blob storage.
+1. Blob Created Event triggers Azure Function.
+1. Azure Function - calls document intelligence service to extract text.
+1. Azure Document Intelligence Service - converts the document format into raw text.
+1. Azure Function Chunking process- break text into reasonable size chunks for LLMs to process.
+1. Azure Functions Generate embedding - using an LLM to produce a vector embedding of the semantics of text chunk.
+1. Chunk & Embedding storage - storing each text chunk along with it's embedding in Azure SQL Database for semantic and Full-text searches.
 
-![pipleline](images/pipeline.png "Pipeline")
+![pipleline](images/azuresql_pipeline.png "Pipeline")
 
 ### Technology choices
 Currently this proof of concept uses:
 * Azure Blob storage for upload of documents.
 * Azure Functions to process the pipeline.
 * Azure Application Insights for logging.
-* Azure KeyVault to store secrets.
 * Azure Managed Identity to connect resources.
 * Azure AI Document Intelligenct for text extraction using the `prebuilt-layout` model.
 * Fixed size, non-overlapping text chunking.
 * The `text-embedding-3-large` embedding model from Azure OpenAI for embedding.
-* Cosmos DB's `DiskANN` index for the resulting vectors.
+* Azure SQL Server to store and retrieve vector embeddings.
 
 ## Setup
 
@@ -34,7 +35,7 @@ Currently this proof of concept uses:
 * An Azure subscription with access to Azure OpenAI.
 * The Azure CLI installed.
 * A Powershell prompt.
-* Download the Azure Functions zip file* from the [latest release](https://github.com/AzureCosmosDB/document-vector-pipeline/releases) (or build your own from this repo with `dotnet publish -c Release`, and then zip the resulting publish directory)
+* Download the Azure Functions zip file* from the [latest release](https://github.com/Azure/document-vector-pipeline/releases) (or build your own from this repo with `dotnet publish -c Release`, and then zip the resulting publish directory)
 
 ### Steps
 1. Create a Resource Group in your Azure subscritpion in the region where you want your resources deployed. Ensure it's a region that supports all of the above Azure Resource types. Examples include `West US`, `East US`, and `East US2`.
@@ -54,14 +55,20 @@ Currently this proof of concept uses:
 
     NOTE: Some resource names must be globally unique. You can a different base name for the created resources by altering the `baseName` variable in the `main.bicepparam` file. If you do, make note of the new names for some of the steps below.
 
-1. Enable Vector search in your Azure Cosmos DB account
+1. Enable access to the managed identity in your Azure SQL database
 
-    1. Navigate to the created Cosmos DB account in the Azure Portal.
-    1. Click on the `Settings\Features` blade.
-    1. Click on the `Vector Search for NoSQL API (preview)` feature, and then click `Enable`. Note: It can take up to 15 minutes to complete the enabling of this feature, and may cause errors during processing of documents during that time. We are currently investigating this issue.
+    1. Navigate to the Azure SQL database account created in the Azure Portal.
+    1. Click on the `Query editor(preview)` blade.
+    1. Execute the following query.Replace `managedidentityname` with the user or system managed identity name that was created.
+    ``` SQL
+    CREATE USER [managedidentityname] FROM EXTERNAL PROVIDER;
+    ALTER ROLE db_datareader ADD MEMBER [managedidentityname];
+    ALTER ROLE db_datawriter ADD MEMBER [managedidentityname];
+    ALTER ROLE db_owner ADD MEMBER [managedidentityname];
+    ```
     1. See the image below:
 
-    ![screenshot](images/enable-vector-search.png "Enable vector search")
+    ![screenshot](images/azuresql_managedidentity.png "Enable vector search")
 
 1. Deploy the functions app code
     Set variables for the path to the zip file you downloaded in the prerequisites, and for the name of the functions app. By default, that will be `docingfuncapp` as below. 
@@ -74,7 +81,7 @@ Currently this proof of concept uses:
 
 1. Monitor traces
     ```powershell
-    # Monitor traces and items in cosmosdb account.
+    # Monitor traces 
     $funappname = 'functionapp'
     echo "---> Monitoring Function Code"
     func azure functionapp logstream $funappname
@@ -86,11 +93,11 @@ Currently this proof of concept uses:
     1. Click on the `Storage Browser` blade
     1. Click on `Blob containers` and then the `documents` folder.
     1. Click the `Upload` button in the toolbar, and then drag or browse to a document.
-    1. Check the event stream, and your Cosmos DB account. The document should be processed and ingested into the `doc_search_container` container of the `semantic_search_db` database in this account.
+    1. Check the event stream, and your Azure SQL database account. The document should be processed and ingested into a `document` table.
 
 1. Query data
 
-    Build an intelligent, context-aware application using the searchable data in your Cosmos DB account. See the [documentation](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/vector-search) for details.
+    Build an intelligent, context-aware application using the searchable data in your Azure SQL database account. See the [documentation](https://github.com/Azure-Samples/azure-sql-db-vector-search) for details.
 
     Good luck!
 

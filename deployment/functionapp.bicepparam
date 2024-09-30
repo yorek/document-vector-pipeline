@@ -2,7 +2,7 @@ using './functionapp.bicep'
 
 param managedIdentityName = 'docinguseridentity'
 param functionAppName = 'docingfunc'
-param cosmosdbAccountName = 'docingcosmosacc'
+//param cosmosdbAccountName = 'docingcosmosacc'
 param diAccountName = 'docingdocintl'
 param openAIAccountName = 'docingopenaiacc'
 param storageAccountName = 'docingblobacc'
