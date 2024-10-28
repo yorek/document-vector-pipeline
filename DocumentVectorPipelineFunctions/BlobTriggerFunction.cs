@@ -23,23 +23,14 @@ public class BlobTriggerFunction(
     ILoggerFactory loggerFactory,
     EmbeddingClient embeddingClient)
 {
-    private readonly ILogger _logger = loggerFactory.CreateLogger<BlobTriggerFunction>();
-
     private const string AzureOpenAIModelDeploymentDimensionsName = "AzureOpenAIModelDimensions";
     private const string SqlConnectionString = "SqlConnectionString";
-    private const string CreateDocumentTableScript = @"
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'document')
-        BEGIN
-            CREATE TABLE [dbo].[document] (
-                [Id] INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
-                [ChunkId] INT NULL,
-                [DocumentUrl] VARCHAR(500) NULL,
-                [Embedding] VARBINARY(8000) NULL,
-                [ChunkText] VARCHAR(MAX) NULL,
-                [PageNumber] INT NULL
-            );
-        END";
 
+    private readonly ILogger _logger = loggerFactory.CreateLogger<BlobTriggerFunction>();
+
+    private readonly string TableSchemaName = Environment.GetEnvironmentVariable("DocumentTableSchema") ?? "dbo";
+    private readonly string TableName = Environment.GetEnvironmentVariable("DocumentTableName") ?? "documents";
+    
     string? managedIdentityClientId = Environment.GetEnvironmentVariable("AzureManagedIdentityClientId");
     DefaultAzureCredential? credential;
     private static readonly int DefaultDimensions = 1536;
@@ -70,11 +61,11 @@ public class BlobTriggerFunction(
 
     private async Task HandleBlobCreateEventAsync(BlobClient blobClient)
     {
-        this.embeddingDimensions = configuration.GetValue<int>(AzureOpenAIModelDeploymentDimensionsName, DefaultDimensions);
-        var connstring = configuration.GetValue<string>(SqlConnectionString);
-        this._logger.LogInformation("Using OpenAI model dimensions: '{embeddingDimensions}'.", this.embeddingDimensions);
+        embeddingDimensions = configuration.GetValue<int>(AzureOpenAIModelDeploymentDimensionsName, DefaultDimensions);
+        var connectionString = configuration.GetValue<string>(SqlConnectionString);
+        _logger.LogInformation("Using OpenAI model dimensions: '{embeddingDimensions}'.", embeddingDimensions);
 
-        this._logger.LogInformation("Analyzing document using DocumentAnalyzerService from blobUri: '{blobUri}' using layout: {layout}", blobClient.Name, "prebuilt-read");
+        _logger.LogInformation("Analyzing document using DocumentAnalyzerService from blobUri: '{blobUri}' using layout: {layout}", blobClient.Name, "prebuilt-read");
 
         using MemoryStream memoryStream = new MemoryStream();
         await blobClient.DownloadToAsync(memoryStream);
@@ -86,7 +77,7 @@ public class BlobTriggerFunction(
             memoryStream);
 
         var result = operation.Value;
-        this._logger.LogInformation("Extracted content from '{name}', # pages {pageCount}", blobClient.Name, result.Pages.Count);
+        _logger.LogInformation("Extracted content from '{name}', # pages {pageCount}", blobClient.Name, result.Pages.Count);
 
         var textChunks = TextChunker.FixedSizeChunking(result);
 
@@ -98,7 +89,7 @@ public class BlobTriggerFunction(
         {
             if (i == textChunks.Count())
             {
-                if (batchChunkTexts.Count() > 0)
+                if (batchChunkTexts.Count > 0)
                 {
                     listOfBatches.Add(new List<TextChunk>(batchChunkTexts));
                 }
@@ -117,80 +108,57 @@ public class BlobTriggerFunction(
             }
         }
 
-        this._logger.LogInformation("Processing list of batches in parallel, total batches: {listSize}, chunks count: {chunksCount}", listOfBatches.Count(), totalChunksCount);
+        _logger.LogInformation("Processing list of batches in parallel, total batches: {listSize}, chunks count: {chunksCount}", listOfBatches.Count(), totalChunksCount);
 
-        //check if database table exists if not create one 
-
-        this._logger.LogInformation("Create document table if it does not exist.");
-
-        if (managedIdentityClientId != null)
-        {
-            //User-assigned managed identity Client ID is passed in via ManagedIdentityClientId
-            var defaultCredentialOptions = new DefaultAzureCredentialOptions { ManagedIdentityClientId = managedIdentityClientId };
-            credential = new DefaultAzureCredential(defaultCredentialOptions);
-        }
-        else
-        {
-            //System-assigned managed identity or logged-in identity of Visual Studio, Visual Studio Code, Azure CLI or Azure PowerShell
-            credential = new DefaultAzureCredential();
-        }
-
-        var token = credential.GetToken(new Azure.Core.TokenRequestContext(new[] { "https://database.windows.net/.default" }));
-
-        await EnsureDocumentTableExistsAsync(connstring,token, CreateDocumentTableScript);
+        await EnsureDocumentTableExistsAsync(connectionString);
 
         await Parallel.ForEachAsync(listOfBatches, new ParallelOptions { MaxDegreeOfParallelism = MaxDegreeOfParallelism }, async (batchChunkTexts, cancellationToken) =>
         {
-            this._logger.LogInformation("Processing batch of size: {batchSize}", batchChunkTexts.Count());
-       
+            _logger.LogInformation("Processing batch of size: {batchSize}", batchChunkTexts.Count);
 
-            this._logger.LogInformation("Processing text: {0}", batchChunkTexts);
-
-            this._logger.LogInformation("Generating embeddings for batch of size: '{size}'.", batchChunkTexts.Count());
-
-            if (batchChunkTexts.Count() > 0)
+            if (batchChunkTexts.Count > 0)
             {
-                var embeddings = await this.GenerateEmbeddingsWithRetryAsync(batchChunkTexts);
-                this._logger.LogInformation("embeddings generated {0}", embeddings);
+                var embeddings = await GenerateEmbeddingsWithRetryAsync(batchChunkTexts);
+                _logger.LogInformation("Embeddings generated: {0}", embeddings.Count);
 
-                if (embeddings.Count() > 0)
+                if (embeddings.Count > 0)
                 {
                     // Save into Azure SQL
-                    this._logger.LogInformation("Begin Saving data in Azure SQL");
+                    _logger.LogInformation("Begin Saving data in Azure SQL");
 
                     for (int index = 0; index < batchChunkTexts.Count; index++)
                     {
-                        using (var connection = new SqlConnection(connstring))
+                        using (var connection = new SqlConnection(connectionString))
                         {
-                            string insertQuery = @"INSERT INTO [dbo].[Document] (ChunkId, DocumentUrl, Embedding, ChunkText, PageNumber) VALUES (@ChunkId, @DocumentUrl,JSON_ARRAY_TO_VECTOR(@Embedding),@ChunkText, @PageNumber);";
+                            string SanitizedName = SantizeDatabaseObjectName(TableSchemaName) + "." + SantizeDatabaseObjectName(TableName);
+                            string insertQuery = $@"INSERT INTO {SanitizedName} (ChunkId, DocumentUrl, Embedding, ChunkText, PageNumber) VALUES (@ChunkId, @DocumentUrl, @Embedding, @ChunkText, @PageNumber);";
 
                             var doc = new Document()
                             {
                                 ChunkId = batchChunkTexts[index].ChunkNumber,
                                 DocumentUrl = blobClient.Uri.AbsoluteUri,
-                                //Embedding = (embeddings[index].Vector.ToArray()).Select(f => BitConverter.GetBytes(f)).SelectMany(b => b).ToArray(),
                                 Embedding = JsonSerializer.Serialize(embeddings[index].Vector),
                                 ChunkText = batchChunkTexts[index].Text,
                                 PageNumber = batchChunkTexts[index].PageNumberIfKnown,
                             };                           
-                            connection.AccessToken = token.Token;
+                            //connection.AccessToken = token.Token;
                             var result = connection.Execute(insertQuery, doc);
                         }                                    
                     }
 
-                    this._logger.LogInformation("End Saving data in Azure SQL");
+                    _logger.LogInformation("End Saving data in Azure SQL");
                 }
             }            
         });
 
-        this._logger.LogInformation("Finished processing blob {name}, total chunks processed {count}.", blobClient.Name, totalChunksCount);
+        _logger.LogInformation("Finished processing blob {name}, total chunks processed {count}.", blobClient.Name, totalChunksCount);
     }
 
     private async Task<EmbeddingCollection> GenerateEmbeddingsWithRetryAsync(IEnumerable<TextChunk> batchChunkTexts)
     {
-        EmbeddingGenerationOptions embeddingGenerationOptions = new EmbeddingGenerationOptions()
+        EmbeddingGenerationOptions embeddingGenerationOptions = new()
         {
-            Dimensions = this.embeddingDimensions
+            Dimensions = embeddingDimensions
         };
 
         int retryCount = 0;
@@ -225,18 +193,46 @@ public class BlobTriggerFunction(
 
     private async Task HandleBlobDeleteEventAsync(BlobClient blobClient)
     {
-        // TODO (amisi) - Implement me.
-        this._logger.LogInformation("Handling delete event for blob name {name}.", blobClient.Name);
+        // TODO - Implement me :)
+        _logger.LogInformation("Handling delete event for blob name {name}.", blobClient.Name);
 
         await Task.Delay(1);
     }
 
-    private static async Task EnsureDocumentTableExistsAsync(string connectionString,AccessToken token, string script)
+    private string SantizeDatabaseObjectName(string name)
     {
+        string santized = name.Trim();
+        if (santized.StartsWith('[') && santized.EndsWith(']'))
+            return santized;
+        else
+            return "[" + santized + "]";
+    }
+
+    private async Task EnsureDocumentTableExistsAsync(string connectionString)
+    {
+        _logger.LogInformation("Creating table if it does not exist yet...");
+
+        string SanitizedName = SantizeDatabaseObjectName(TableSchemaName) + "." + SantizeDatabaseObjectName(TableName);
+        _logger.LogInformation("Document Table: {0}", SanitizedName);
+
+        string createDocumentTableScript = $@"
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = PARSENAME('{SanitizedName}', 1) AND TABLE_SCHEMA = PARSENAME('{SanitizedName}', 2))
+        BEGIN
+            CREATE TABLE {SanitizedName} (
+                [Id] INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+                [ChunkId] INT NULL,
+                [DocumentUrl] VARCHAR(1000) NULL,
+                [Embedding] VECTOR(1536) NULL,
+                [ChunkText] VARCHAR(MAX) NULL,
+                [PageNumber] INT NULL
+            );
+        END";
+
         using (var connection = new SqlConnection(connectionString))
         {
-            connection.AccessToken = token.Token;
-            await connection.ExecuteAsync(script);
+            //connection.AccessToken = token.Token;
+            await connection.ExecuteAsync(createDocumentTableScript);
         }
     }
 }
+
