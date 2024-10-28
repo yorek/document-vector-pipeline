@@ -1,7 +1,7 @@
-# Azure Cosmos DB Document to Vector ingestion pipeline Proof-of-concept
+# Azure SQL Document to Vector ingestion pipeline Proof-of-concept
 
 ## Background
-This purpose of this project is to demonstrate a proof of concept pipeline for ingesting content stored in document form (pdf, docx, etc) into a searchable index in Azure Cosmos DB for NoSQL.
+This purpose of this project is to demonstrate a proof of concept pipeline for ingesting content stored in document form (pdf, docx, etc) into a searchable data in Azure SQL using the new vector capabilities.
 
 **Let us know what you think!** Please reach out to CDB4AI@Microsoft.com with feedback and create a GitHub issue for any bugs/feature requests.
 
@@ -12,7 +12,7 @@ The basic stages of the pipeline include:
 1. Text extraction - converting the document format into raw text to be indexed.
 1. Text chunking - breaking the text into reasonable size chunks for LLMs to process.
 1. Text embedding - using an LLM to produce a vector embedding of the semantics of text chunk.
-1. Text storage - storing each text chunk along with it's embedding in an Azure Cosmos DB container configured to perform efficient vector (and eventually Full-text) searches.
+1. Text storage - storing each text chunk along with it's embedding in an Azure SQL table configured to perform efficient vector (and eventually Full-text) searches.
 
 ![pipleline](images/pipeline.png "Pipeline")
 
@@ -26,7 +26,7 @@ Currently this proof of concept uses:
 * Azure AI Document Intelligenct for text extraction using the `prebuilt-layout` model.
 * Fixed size, non-overlapping text chunking.
 * The `text-embedding-3-large` embedding model from Azure OpenAI for embedding.
-* Cosmos DB's `DiskANN` index for the resulting vectors.
+* Azure SQL for the resulting vectors.
 
 ## Setup
 
