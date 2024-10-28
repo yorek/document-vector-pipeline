@@ -13,6 +13,9 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   sku: {
     name: 'Standard_LRS'
   }
+  properties: {
+    allowSharedKeyAccess: false // Ensure shared key access is disabled
+  }
   tags: tags
 }
 
@@ -35,7 +38,12 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
   name: managedIdentityName
 }
 
-param storage_account_id_roles array = ['2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'] // Storage blob data reader
+// Assign storage account roles to blobService
+// Storage Account Contributor,  Storage Blob Data Owner ,  Storage Queue Data Contributor
+param storage_account_id_roles array = [
+  '17d1049b-9a84-46fb-8f53-869881c3d3ab', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b', '974c5e8b-45b9-4653-ba55-5f855dd0fb88' 
+]
+// Assign roles to storage account
 resource roleAssignmentStorageAccount 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for id_role in storage_account_id_roles: {
     name: guid(resourceGroup().id, '${storage.name}-storagerole', id_role)
@@ -47,6 +55,7 @@ resource roleAssignmentStorageAccount 'Microsoft.Authorization/roleAssignments@2
     }
   }
 ]
+
 
 // Output storage account name, connection string and key
 output AzureBlobStorageAccountName string = storage.name

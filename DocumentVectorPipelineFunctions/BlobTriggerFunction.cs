@@ -5,9 +5,10 @@ using System.Net;
 using System.Text.Json;
 using Azure;
 using Azure.AI.FormRecognizer.DocumentAnalysis;
+using Azure.Core;
+using Azure.Identity;
 using Azure.Storage.Blobs;
 using Dapper;
-using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
@@ -40,6 +41,7 @@ public class BlobTriggerFunction(
         END";
 
     string? managedIdentityClientId = Environment.GetEnvironmentVariable("AzureManagedIdentityClientId");
+    DefaultAzureCredential? credential;
     private static readonly int DefaultDimensions = 1536;
 
     private const int MaxRetryCount = 100;
@@ -121,12 +123,26 @@ public class BlobTriggerFunction(
 
         this._logger.LogInformation("Create document table if it does not exist.");
 
-        await EnsureDocumentTableExistsAsync(connstring, CreateDocumentTableScript);
+        if (managedIdentityClientId != null)
+        {
+            //User-assigned managed identity Client ID is passed in via ManagedIdentityClientId
+            var defaultCredentialOptions = new DefaultAzureCredentialOptions { ManagedIdentityClientId = managedIdentityClientId };
+            credential = new DefaultAzureCredential(defaultCredentialOptions);
+        }
+        else
+        {
+            //System-assigned managed identity or logged-in identity of Visual Studio, Visual Studio Code, Azure CLI or Azure PowerShell
+            credential = new DefaultAzureCredential();
+        }
+
+        var token = credential.GetToken(new Azure.Core.TokenRequestContext(new[] { "https://database.windows.net/.default" }));
+
+        await EnsureDocumentTableExistsAsync(connstring,token, CreateDocumentTableScript);
 
         await Parallel.ForEachAsync(listOfBatches, new ParallelOptions { MaxDegreeOfParallelism = MaxDegreeOfParallelism }, async (batchChunkTexts, cancellationToken) =>
         {
             this._logger.LogInformation("Processing batch of size: {batchSize}", batchChunkTexts.Count());
-            //await this.ProcessCurrentBatchAsync(blobClient, cosmosDBClientWrapper, batchChunkText);
+       
 
             this._logger.LogInformation("Processing text: {0}", batchChunkTexts);
 
@@ -144,7 +160,7 @@ public class BlobTriggerFunction(
 
                     for (int index = 0; index < batchChunkTexts.Count; index++)
                     {
-                        using (IDbConnection db = new SqlConnection(connstring))
+                        using (var connection = new SqlConnection(connstring))
                         {
                             string insertQuery = @"INSERT INTO [dbo].[Document] (ChunkId, DocumentUrl, Embedding, ChunkText, PageNumber) VALUES (@ChunkId, @DocumentUrl,JSON_ARRAY_TO_VECTOR(@Embedding),@ChunkText, @PageNumber);";
 
@@ -156,9 +172,9 @@ public class BlobTriggerFunction(
                                 Embedding = JsonSerializer.Serialize(embeddings[index].Vector),
                                 ChunkText = batchChunkTexts[index].Text,
                                 PageNumber = batchChunkTexts[index].PageNumberIfKnown,
-                            };
-
-                            var result = db.Execute(insertQuery, doc);
+                            };                           
+                            connection.AccessToken = token.Token;
+                            var result = connection.Execute(insertQuery, doc);
                         }                                    
                     }
 
@@ -215,10 +231,11 @@ public class BlobTriggerFunction(
         await Task.Delay(1);
     }
 
-    private static async Task EnsureDocumentTableExistsAsync(string connectionString, string script)
+    private static async Task EnsureDocumentTableExistsAsync(string connectionString,AccessToken token, string script)
     {
         using (var connection = new SqlConnection(connectionString))
         {
+            connection.AccessToken = token.Token;
             await connection.ExecuteAsync(script);
         }
     }

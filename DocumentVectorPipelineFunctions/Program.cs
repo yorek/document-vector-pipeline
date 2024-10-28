@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 var _logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Program");  
 
 const string AzureDocumentIntelligenceEndpointConfigName = "AzureDocumentIntelligenceConnectionString";
-//const string AzureCosmosDBConnectionString = "AzureCosmosDBConnectionString";
+
 const string AzureOpenAIConnectionString = "AzureOpenAIConnectionString";
 const string AzureOpenAIModelDeploymentConfigName = "AzureOpenAIModelDeployment";
 const string AzureDocumentIntelligenceKey = "AzureDocumentIntelligenceKey";

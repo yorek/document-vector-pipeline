@@ -17,10 +17,9 @@ param function_app_appInsightsName string = '${function_app_name}insight'
 param function_app_logAnalyticsName string = '${function_app_name}log'
 param function_app_appServicePlanName string = '${function_app_name}service'
 
-// CosmosDB params
-param cosmosdb_capabilities array
-param cosmosdb_databaseName string
-param cosmosdb_name string
+//Azure SQL params
+param azuresqldb_name string
+param azuresqlServerName string
 
 // Open AI params
 param open_ai_deployments array
@@ -60,19 +59,17 @@ module storage_deployment 'storage.bicep' = {
   ]
 }
 
-// CosmosDB resource
-module cosmosdb_deployment 'cosmosdb.bicep' = {
-  name: 'cosmosdb_deployment'
+// Azure SQL Database resource
+module azuresql_deployment 'azuresql.bicep' = {
+  name: 'azuresql_deployment'
   params: {
     managedIdentityName: managedIdentity_name
-    capabilities: cosmosdb_capabilities
-    databaseName: cosmosdb_databaseName
-    name: cosmosdb_name
+    azuresqldbName: azuresqldb_name
+    azuresqlServerName: azuresqlServerName
     tags: tags
   }
   dependsOn: [
     userManagedIdentity_deployment
-    storage_deployment
   ]
 }
 
@@ -122,20 +119,21 @@ module function_app_deployment 'functionapp.bicep' = {
     appInsightsName: function_app_appInsightsName
     appServicePlanName: function_app_appServicePlanName
     logAnalyticsName: function_app_logAnalyticsName
-    cosmosdbAccountName: cosmosdb_name
     diAccountName: document_intelligence_name
     openAIAccountName: open_ai_name
     storageAccountName: storage_name
     modelDeployment: modelDeployment
     modelDimensions: modelDimensions
+    azuresqldbName: azuresqldb_name
+    azuresqlserverName: azuresqlServerName
   }
   dependsOn: [
     userManagedIdentity_deployment
     storage_deployment
     open_ai_deployment
     document_intelligence_deployment
-    cosmosdb_deployment
-  ]
+    azuresql_deployment
+ ]
 }
 
 // Output params
@@ -150,9 +148,6 @@ output AZURE_USER_MANAGED_IDENTITY_TENANTID string = userManagedIdentity_deploym
 output AZURE_BLOB_STORE_ACCOUNT_NAME string = storage_deployment.outputs.AzureBlobStorageAccountName
 output AZURE_BLOB_STORE_ACCOUNT_ENDPOINT string = storage_deployment.outputs.AzureBlobStorageAccountEndpoint
 
-// CosmosDB Params
-output AZURE_COSMOS_DB_ACCOUNT_NAME string = cosmosdb_deployment.outputs.CosmosDBAccountName
-output AZURE_COSMOS_DB_ENDPOINT string = cosmosdb_deployment.outputs.CosmosDBEndpoint
 
 // Document Intelligence Params
 output AZURE_DOCUMENT_INTELLIGENCE_NAME string = document_intelligence_deployment.outputs.DocumentIntelligenceName
@@ -161,3 +156,6 @@ output AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT string = document_intelligence_deplo
 // OpenAI
 output AZURE_OPEN_AI_SERVICE_NAME string = open_ai_deployment.outputs.openAIServiceName
 output AZURE_OPEN_AI_SERVICE_ENDPOINT string = open_ai_deployment.outputs.openAIServiceEndpoint
+
+// SQL Query
+output SQL_QUERY string = 'CREATE USER [${managedIdentity_name}] FROM EXTERNAL PROVIDER;ALTER ROLE db_datareader ADD MEMBER [${managedIdentity_name}];ALTER ROLE db_datawriter ADD MEMBER [${managedIdentity_name}];ALTER ROLE db_owner ADD MEMBER [${managedIdentity_name}];'

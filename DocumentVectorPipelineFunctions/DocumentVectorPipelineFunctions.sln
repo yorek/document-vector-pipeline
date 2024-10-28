@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.002.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DocumentVectorPipelineFunctions", "DocumentVectorPipelineFunctions.csproj", "{E82D791D-5856-467F-8BF7-24969E67E516}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "obj", "obj", "{976BA792-F923-41C1-A3D9-530B4FB625A5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Debug", "Debug", "{F3826A57-F0C5-4AA3-B365-927B081D9D19}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "net8.0", "net8.0", "{33BC1693-1769-45C3-821B-B136A68A378A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkerExtensions", "obj\Debug\net8.0\WorkerExtensions\WorkerExtensions.csproj", "{66D2D6C5-1499-4CDE-89AC-1C3367195A2D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E82D791D-5856-467F-8BF7-24969E67E516}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E82D791D-5856-467F-8BF7-24969E67E516}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E82D791D-5856-467F-8BF7-24969E67E516}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E82D791D-5856-467F-8BF7-24969E67E516}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66D2D6C5-1499-4CDE-89AC-1C3367195A2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66D2D6C5-1499-4CDE-89AC-1C3367195A2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66D2D6C5-1499-4CDE-89AC-1C3367195A2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66D2D6C5-1499-4CDE-89AC-1C3367195A2D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F3826A57-F0C5-4AA3-B365-927B081D9D19} = {976BA792-F923-41C1-A3D9-530B4FB625A5}
+		{33BC1693-1769-45C3-821B-B136A68A378A} = {F3826A57-F0C5-4AA3-B365-927B081D9D19}
+		{66D2D6C5-1499-4CDE-89AC-1C3367195A2D} = {33BC1693-1769-45C3-821B-B136A68A378A}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {78638E31-F506-4E2F-8E96-1A049A40C3F6}
+	EndGlobalSection
+EndGlobal
