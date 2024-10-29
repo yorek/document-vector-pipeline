@@ -35,7 +35,7 @@ Currently this proof of concept uses:
 * An Azure subscription with access to Azure OpenAI.
 * The Azure CLI installed.
 * A Powershell prompt.
-* Download the Azure Functions zip file* from the [latest release](https://github.com/Azure/document-vector-pipeline/releases) (or build your own from this repo with `dotnet publish -c Release`, and then zip the resulting publish directory)
+* Build the code `dotnet publish -c Release`, and then zip the resulting publish directory)
 
 ### Steps
 1. Create a Resource Group in your Azure subscritpion in the region where you want your resources deployed. Ensure it's a region that supports all of the above Azure Resource types. Examples include `West US`, `East US`, and `East US2`.
@@ -45,6 +45,11 @@ Currently this proof of concept uses:
     $sub = ""
     $rg = ""
     az account set --subscription $sub
+    ```
+
+1. Get your Principal ID and set it as a variable
+    ```powershell
+    $env:principalId = az ad signed-in-user show --query objectId -o tsv
     ```
 
 1. Deploy initial set of resources
@@ -59,12 +64,10 @@ Currently this proof of concept uses:
 
     1. Navigate to the Azure SQL database account created in the Azure Portal.
     1. Click on the `Query editor(preview)` blade.
-    1. Execute the following query.Replace `managedidentityname` with the user or system managed identity name that was created.
+    1. Execute the following query to allow the identity `docinguseridentity` to allow to access Azure SQL.
     ``` SQL
-    CREATE USER [managedidentityname] FROM EXTERNAL PROVIDER;
-    ALTER ROLE db_datareader ADD MEMBER [managedidentityname];
-    ALTER ROLE db_datawriter ADD MEMBER [managedidentityname];
-    ALTER ROLE db_owner ADD MEMBER [managedidentityname];
+    CREATE USER [docinguseridentity] FROM EXTERNAL PROVIDER;
+    ALTER ROLE db_owner ADD MEMBER [docinguseridentity];
     ```
     1. See the image below:
 

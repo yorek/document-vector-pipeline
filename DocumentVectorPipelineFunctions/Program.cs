@@ -21,7 +21,7 @@ const string AzureDocumentIntelligenceKey = "AzureDocumentIntelligenceKey";
 const string AzureOpenAIKey = "AzureOpenAIKey";
 
 string? managedIdentityClientId = Environment.GetEnvironmentVariable("AzureManagedIdentityClientId");
-bool local = Convert.ToBoolean(Environment.GetEnvironmentVariable("RunningLocally"));
+bool local = Convert.ToBoolean(Environment.GetEnvironmentVariable("RunningLocally") ?? "false");
 
 _logger.LogInformation($"Running locally: {local}");
 

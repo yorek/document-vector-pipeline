@@ -28,11 +28,6 @@ resource azuresqlserver 'Microsoft.Sql/servers@2023-08-01-preview' = {
     publicNetworkAccess: 'Enabled'
     primaryUserAssignedIdentityId: managedIdentity.id
     administrators: {
-      administratorType: 'ActiveDirectory'
-      principalType: 'User'
-      login: '${azuresqlServerName}-admin'
-      sid: managedIdentity.properties.principalId
-      tenantId: subscription().tenantId
       azureADOnlyAuthentication: true
     }
     restrictOutboundNetworkAccess: 'Disabled'
