@@ -1,18 +1,21 @@
 param location string = resourceGroup().location
-
-
+ 
+// PrincipalId to be the SQL Admin
+@description('PrincipalId to be the SQL Admin')
+param userPrincipalId string
+ 
 param managedIdentityName string
 param azuresqldbName string
 param tags object
-
+ 
 param azuresqlServerName string
-
+ 
 // Get existing managed identity resource
 resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-07-31-preview' existing = {
   name: managedIdentityName
 }
-
-
+ 
+ 
 resource azuresqlserver 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: azuresqlServerName
   location: location
@@ -28,6 +31,11 @@ resource azuresqlserver 'Microsoft.Sql/servers@2023-08-01-preview' = {
     publicNetworkAccess: 'Enabled'
     primaryUserAssignedIdentityId: managedIdentity.id
     administrators: {
+      administratorType: 'ActiveDirectory'
+      principalType: 'User'
+      login: '${azuresqlServerName}-admin'
+      sid: userPrincipalId
+      tenantId: subscription().tenantId
       azureADOnlyAuthentication: true
     }
     restrictOutboundNetworkAccess: 'Disabled'
@@ -55,7 +63,7 @@ resource azuresqldatabase 'Microsoft.Sql/servers/databases@2022-05-01-preview' =
     createMode: 'Default'
   }
 }
-
+ 
 resource firewallRule 'Microsoft.Sql/servers/firewallRules@2022-05-01-preview' = {
   parent: azuresqlserver
   name: '${azuresqlServerName}-AllowAllWindowsAzureIps'
@@ -64,8 +72,8 @@ resource firewallRule 'Microsoft.Sql/servers/firewallRules@2022-05-01-preview' =
     endIpAddress: '0.0.0.0'
   }
 }
-
+ 
 output sqlServerName string = azuresqlServerName
 output sqlDatabaseName string = azuresqldbName
-
+ 
 //output sqlServerFullyQualifiedDomainName string = azuresqldbName.properties.fullyQualifiedDomainName

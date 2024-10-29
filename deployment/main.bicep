@@ -1,6 +1,13 @@
 // Resource params
 param tags object = {}
 
+@description('Base name for all resources')
+param baseName string
+
+// PrincipalId to be the SQL Admin
+@description('PrincipalId to be the SQL Admin')
+param userPrincipalId string
+
 // Managed identity params
 param managedIdentity_name string
 
@@ -66,6 +73,7 @@ module azuresql_deployment 'azuresql.bicep' = {
     managedIdentityName: managedIdentity_name
     azuresqldbName: azuresqldb_name
     azuresqlServerName: azuresqlServerName
+    userPrincipalId: userPrincipalId
     tags: tags
   }
   dependsOn: [

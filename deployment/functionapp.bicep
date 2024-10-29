@@ -41,7 +41,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing 
   name: storageAccountName
 }
 
-var sqlconnectionstringvalue = 'Server=tcp:${azuresqlserver.properties.fullyQualifiedDomainName},1433;Initial Catalog=${azuresqldatabase.name};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+var sqlconnectionstringvalue = 'Server=tcp:${azuresqlserver.properties.fullyQualifiedDomainName},1433;Initial Catalog=${azuresqldatabase.name};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;User Id=${managedIdentity.properties.clientId};'
 // Create webapps storage account to hold webapps related resources
 resource func_app_storage_account 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: funcAppStorageAccountName

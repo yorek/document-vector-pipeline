@@ -1,6 +1,9 @@
 using './main.bicep'
 
-var baseName = 'docing'
+param baseName = 'docing'
+
+// Mandatory params
+param userPrincipalId = ''
 
 // Naming params
 param managedIdentity_name = '${baseName}useridentity'
@@ -40,7 +43,7 @@ param open_ai_deployments = [
     name: modelDeployment
     sku: {
       name: 'Standard'
-      capacity: 100
+      capacity: 10
     }
     model: {
       name: modelDeployment
