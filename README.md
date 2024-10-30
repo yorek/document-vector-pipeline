@@ -27,7 +27,7 @@ Currently this proof of concept uses:
 * Azure AI Document Intelligenct for text extraction using the `prebuilt-layout` model.
 * Fixed size, non-overlapping text chunking.
 * The `text-embedding-3-large` embedding model from Azure OpenAI for embedding.
-* Azure SQL o store and retrieve vector embeddings.
+* Azure SQL Server to store and retrieve vector embeddings.
 
 ## Setup
 
@@ -35,30 +35,39 @@ Currently this proof of concept uses:
 * An Azure subscription with access to Azure OpenAI.
 * The Azure CLI installed.
 * A Powershell prompt.
-* Build the code `dotnet publish -c Release`, and then zip the resulting publish directory)
+
 
 ### Steps
-1. Create a Resource Group in your Azure subscritpion in the region where you want your resources deployed. Ensure it's a region that supports all of the above Azure Resource types. Examples include `West US`, `East US`, and `East US2`.
+
 
 1. Set variables and subscription:
     ```powershell
     $sub = ""
     $rg = ""
-    az account set --subscription $sub
+    az account set --subscription $sub    
+    ```
+
+1. Create a Resource Group in your Azure subscritpion in the region where you want your resources deployed. Ensure it's a region that supports all of the above Azure Resource types. Examples include `West US`, `East US`, and `East US2`.
+
+    ```powershell
+    $region='eastus'
+    $owner='docinguser'
+    az group create -l $region -n $rg --tags Owner=$owner 
     ```
 
 1. Get your Principal ID and set it as a variable
     ```powershell
-    $env:principalId = az ad signed-in-user show --query objectId -o tsv
+    $principalId = az ad signed-in-user show --query objectId -o tsv
     ```
-
-1. Deploy initial set of resources
+1. Set the baseName variable and deploy initial set of resources
     ```powershell
-    az deployment group create --name 'deploy1' --resource-group $rg --template-file 'main.bicep' -p .\main.bicepparam
+    $baseName = 'docing'
+
+    az deployment group create --name "${baseName}deploy" --resource-group $rg --template-file '.\deployment\main.bicep' -p .\deployment\main.bicepparam --parameters userPrincipalId=$principalId baseName=$baseName
     ```
     This step will likely take several minutes to complete - it will create all of the required Azure resources.
 
-    NOTE: Some resource names must be globally unique. You can a different base name for the created resources by altering the `baseName` variable in the `main.bicepparam` file. If you do, make note of the new names for some of the steps below.
+    NOTE: Some resource names must be globally unique. You can set a different base name for the created resources by altering the `baseName` variable value.    
 
 1. Enable access to the managed identity in your Azure SQL database
 
@@ -74,20 +83,20 @@ Currently this proof of concept uses:
     ![screenshot](images/azuresql_managedidentity.png "Enable vector search")
 
 1. Deploy the functions app code
-    Set variables for the path to the zip file you downloaded in the prerequisites, and for the name of the functions app. By default, that will be `docingfuncapp` as below. 
+    Set variables for the GitHub repository path that contains the functionapp sourcecode and for the name of the functions app. By default, that will be `docingfuncapp` as below. 
    ```powershell
-        $zippedPath = "E:\deployment\functionapp.zip"
-        $funappname = 'docingfuncapp'
+        $funcappname = '${basename}funcapp'
+        $repoUrl = 'https://github.com/yorek/document-vector-pipeline'
+        $branch = 'master'
         echo "---> Deploying Function Code"
-        az functionapp deployment source config-zip -g $rg -n $funappname --src $zippedPath
+        az functionapp deployment source config --branch $branch --manual-integration --name $funcappname --repo-url $repoUrl --resource-group $rg
     ```
 
 1. Monitor traces
     ```powershell
     # Monitor traces 
-    $funappname = 'functionapp'
     echo "---> Monitoring Function Code"
-    func azure functionapp logstream $funappname
+    func azure functionapp logstream $funcappname
     ```
     Note - `func` above comes from the Azure Functions tools.  You can also view this log stream in the Azure Portal by navigating the the Azure Functions app created above, and clicking on the `Monitoring\Log Stream` blade.
 
