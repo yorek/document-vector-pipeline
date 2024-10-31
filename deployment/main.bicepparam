@@ -1,16 +1,9 @@
 using './main.bicep'
 
-param baseName = 'docing'
+param baseName = 'docai'
 
 // Mandatory params
 param userPrincipalId = ''
-
-// Naming params
-param managedIdentity_name = '${baseName}useridentity'
-param storage_name = '${baseName}blobacc'
-param function_app_name = '${baseName}funcapp'
-param document_intelligence_name = '${baseName}docintl'
-param open_ai_name = '${baseName}openai'
 
 // Common params
 param tags = {}
@@ -22,9 +15,6 @@ param storage_containers = [
   }
 ]
 
-//azure sql params
-param azuresqldb_name =  '${baseName}db'
-param azuresqlServerName =  '${baseName}server'
 // Function app params
 param function_app_storageSkuName = 'Standard_LRS'
 
@@ -36,7 +26,7 @@ param document_intelligence_publicNetworkAccess = 'Enabled'
 param document_intelligence_disableLocalAuth = false
 
 // Open AI params
-param modelDeployment = 'text-embedding-3-large'
+param modelDeployment = 'text-embedding-ada-002'
 param modelDimensions = '1536'
 param open_ai_deployments = [
   {
@@ -47,7 +37,7 @@ param open_ai_deployments = [
     }
     model: {
       name: modelDeployment
-      version: '1'
+      version: '2'
     }
   }
 ]

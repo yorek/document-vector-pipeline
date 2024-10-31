@@ -4,33 +4,31 @@ param tags object = {}
 @description('Base name for all resources')
 param baseName string
 
+// Resource names
+var managedIdentity_name = '${baseName}useridentity'
+var storage_name = '${baseName}blobacc'
+var function_app_name = '${baseName}funcapp'
+var document_intelligence_name = '${baseName}docintl'
+var open_ai_name = '${baseName}openai'
+var azuresqldb_name = '${baseName}db'
+var azuresqlServerName = '${baseName}server'
+var function_app_storageAccountName = '${function_app_name}store'
+var function_app_appInsightsName = '${function_app_name}insight'
+var function_app_logAnalyticsName = '${function_app_name}log'
+var function_app_appServicePlanName = '${function_app_name}service'
+
 // PrincipalId to be the SQL Admin
 @description('PrincipalId to be the SQL Admin')
 param userPrincipalId string
 
-// Managed identity params
-param managedIdentity_name string
-
 // Storage params
-param storage_name string
 param storage_containers array = []
 
 // Function app params
-param function_app_name string
 param function_app_storageSkuName string
-
-param function_app_storageAccountName string = '${function_app_name}store'
-param function_app_appInsightsName string = '${function_app_name}insight'
-param function_app_logAnalyticsName string = '${function_app_name}log'
-param function_app_appServicePlanName string = '${function_app_name}service'
-
-//Azure SQL params
-param azuresqldb_name string
-param azuresqlServerName string
 
 // Open AI params
 param open_ai_deployments array
-param open_ai_name string
 param open_ai_sku string
 param open_ai_kind string
 param open_ai_format string
@@ -39,7 +37,6 @@ param modelDeployment string
 param modelDimensions string
 
 // Document intelligence params
-param document_intelligence_name string
 param document_intelligence_sku object
 param document_intelligence_publicNetworkAccess string
 param document_intelligence_disableLocalAuth bool
