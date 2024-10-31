@@ -50,21 +50,24 @@ Currently this proof of concept uses:
 1. Create a Resource Group in your Azure subscritpion in the region where you want your resources deployed. Ensure it's a region that supports all of the above Azure Resource types. Examples include `West US`, `East US`, and `East US2`.
 
     ```powershell
-    $region='eastus'
-    $owner='docinguser'
-    az group create -l $region -n $rg --tags Owner=$owner 
+    $region = 'eastus'
+    az group create -l $region -n $rg 
     ```
 
 1. Get your Principal ID and set it as a variable
+
     ```powershell
-    $principalId = az ad signed-in-user show --query objectId -o tsv
+    $principalId = az ad signed-in-user show --query id -o tsv
     ```
-1. Set the baseName variable and deploy initial set of resources
+
+1. Set the baseName variable to provide a base name for the created resources, and deploy initial set of resources
+
     ```powershell
     $baseName = 'docing'
 
     az deployment group create --name "${baseName}deploy" --resource-group $rg --template-file '.\deployment\main.bicep' -p .\deployment\main.bicepparam --parameters userPrincipalId=$principalId baseName=$baseName
     ```
+    
     This step will likely take several minutes to complete - it will create all of the required Azure resources.
 
     NOTE: Some resource names must be globally unique. You can set a different base name for the created resources by altering the `baseName` variable value.    
