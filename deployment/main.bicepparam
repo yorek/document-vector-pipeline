@@ -26,7 +26,7 @@ param document_intelligence_publicNetworkAccess = 'Enabled'
 param document_intelligence_disableLocalAuth = false
 
 // Open AI params
-param modelDeployment = 'text-embedding-ada-002'
+param modelDeployment = 'text-embedding-3-large'
 param modelDimensions = '1536'
 param open_ai_deployments = [
   {
@@ -37,7 +37,7 @@ param open_ai_deployments = [
     }
     model: {
       name: modelDeployment
-      version: '2'
+      version: '1'
     }
   }
 ]

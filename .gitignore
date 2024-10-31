@@ -264,3 +264,6 @@ __pycache__/
 
 /DocumentVectorPipelineFunctions/local.settings.json.dm
 /DocumentVectorPipelineFunctions/local.settings.json
+
+# Custom
+*.zip
